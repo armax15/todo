@@ -132,19 +132,229 @@ tags: [tag1, tag2]
 
 ## 🚀 Деплой
 
-### Vercel (рекомендуется)
+У вас есть несколько вариантов деплоя приложения в зависимости от ваших требований и инфраструктуры.
 
-1. Подключите репозиторий к Vercel
-2. Настройте переменные окружения
-3. Деплой произойдет автоматически
+### 📋 Подготовка к деплою
 
-### Другие платформы
+Перед деплоем убедитесь, что у вас настроены:
 
-Приложение можно развернуть на любой платформе, поддерживающей Node.js:
-- Netlify
-- AWS Amplify
-- Railway
-- Digital Ocean
+1. Переменные окружения (скопируйте `.env.production.example` в `.env.production`)
+2. Google OAuth credentials (если используете Google авторизацию)
+3. Backend API (Go сервер должен быть доступен)
+4. База данных PostgreSQL
+
+### 🎯 Вариант 1: Vercel (рекомендуется для фронтенда)
+
+**Преимущества:** Самый простой способ, автоматический CI/CD, глобальный CDN
+
+**Шаги:**
+
+1. Установите Vercel CLI:
+```bash
+npm i -g vercel
+```
+
+2. Залогиньтесь и задеплойте:
+```bash
+vercel
+```
+
+3. Настройте переменные окружения в Vercel Dashboard:
+   - `NEXTAUTH_URL`
+   - `NEXTAUTH_SECRET`
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `NEXT_PUBLIC_API_URL`
+
+4. Для production деплоя:
+```bash
+vercel --prod
+```
+
+**Альтернатива через GitHub:**
+1. Подключите репозиторий к [Vercel](https://vercel.com)
+2. Настройте переменные окружения в настройках проекта
+3. Деплой произойдет автоматически при push в main
+
+### 🐳 Вариант 2: Docker (универсальный)
+
+**Преимущества:** Полный контроль, работает везде, легко масштабируется
+
+#### Локальная сборка и запуск:
+
+```bash
+# Сборка образа
+docker build -t task-manager-frontend .
+
+# Запуск контейнера
+docker run -p 3000:3000 \
+  -e NEXTAUTH_URL=http://localhost:3000 \
+  -e NEXTAUTH_SECRET=your-secret \
+  -e NEXT_PUBLIC_API_URL=http://localhost:8080/api \
+  task-manager-frontend
+```
+
+#### Docker Compose (полный стек):
+
+```bash
+# Создайте .env файл с переменными окружения
+cp .env.production.example .env.production
+
+# Запустите все сервисы (frontend + backend + db + nginx)
+docker compose up -d
+
+# Просмотр логов
+docker compose logs -f
+
+# Остановка
+docker compose down
+```
+
+### 🖥️ Вариант 3: VPS (Digital Ocean, AWS, Hetzner и т.д.)
+
+**Преимущества:** Полный контроль, возможность размещения всего стека
+
+#### Шаг 1: Настройка VPS
+
+Запустите скрипт настройки на вашем сервере (требуется root):
+
+```bash
+# На локальной машине
+scp scripts/setup-vps.sh root@your-server.com:/tmp/
+ssh root@your-server.com 'bash /tmp/setup-vps.sh'
+```
+
+Или напрямую:
+
+```bash
+ssh root@your-server.com 'bash <(curl -s https://raw.githubusercontent.com/your-repo/main/scripts/setup-vps.sh)'
+```
+
+#### Шаг 2: Деплой приложения
+
+```bash
+# Настройте переменные окружения
+export VPS_HOST=your-server.com
+export VPS_USER=deploy
+export APP_DIR=/app/task-manager
+
+# Запустите деплой
+./scripts/deploy-vps.sh
+```
+
+#### Шаг 3: Настройка SSL с Let's Encrypt
+
+```bash
+ssh $VPS_USER@$VPS_HOST
+sudo apt-get install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+```
+
+### 🚂 Вариант 4: Railway
+
+**Преимущества:** Простой PaaS, автоматические деплои, бесплатный тариф
+
+**Шаги:**
+
+1. Создайте аккаунт на [Railway](https://railway.app)
+2. Создайте новый проект из GitHub репозитория
+3. Railway автоматически обнаружит `railway.json` и настроит деплой
+4. Добавьте переменные окружения в настройках проекта
+5. Деплой произойдет автоматически
+
+**Через Railway CLI:**
+
+```bash
+# Установка
+npm i -g @railway/cli
+
+# Логин
+railway login
+
+# Инициализация проекта
+railway init
+
+# Деплой
+railway up
+```
+
+### 🎨 Вариант 5: Render
+
+**Преимущества:** Простой PaaS с бесплатным тариифом, автоматические деплои
+
+**Шаги:**
+
+1. Создайте аккаунт на [Render](https://render.com)
+2. Создайте новый Web Service из GitHub репозитория
+3. Render автоматически обнаружит `render.yaml`
+4. Или настройте вручную:
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm run start`
+5. Добавьте переменные окружения
+
+### 🔄 CI/CD с GitHub Actions
+
+Проект включает готовый workflow для автоматического деплоя.
+
+**Настройка GitHub Secrets:**
+
+Перейдите в Settings → Secrets and variables → Actions и добавьте:
+
+Для VPS деплоя:
+- `VPS_HOST` - IP или домен вашего сервера
+- `VPS_USERNAME` - пользователь для SSH
+- `VPS_SSH_KEY` - приватный SSH ключ
+
+Для Vercel деплоя:
+- `VERCEL_TOKEN` - токен из Vercel dashboard
+- `VERCEL_ORG_ID` - ID организации
+- `VERCEL_PROJECT_ID` - ID проекта
+
+**Автоматический деплой:**
+
+После настройки secrets, деплой будет происходить автоматически при push в `main` ветку.
+
+### 📊 Сравнение вариантов
+
+| Вариант | Сложность | Стоимость | Контроль | Масштабируемость |
+|---------|-----------|-----------|----------|------------------|
+| Vercel | ⭐ Легко | Бесплатно / $20+ | Низкий | ⭐⭐⭐ |
+| Railway | ⭐⭐ Легко | Бесплатно / $5+ | Средний | ⭐⭐ |
+| Render | ⭐⭐ Легко | Бесплатно / $7+ | Средний | ⭐⭐ |
+| Docker VPS | ⭐⭐⭐⭐ Сложно | $5-20/мес | Полный | ⭐⭐⭐⭐ |
+
+### 🔧 Управление окружениями
+
+**Development:**
+```bash
+npm run dev
+```
+
+**Production Build:**
+```bash
+npm run build
+npm run start
+```
+
+**Docker Production:**
+```bash
+docker compose -f docker-compose.yml up -d
+```
+
+### 📈 Мониторинг и логи
+
+**Docker:**
+```bash
+docker compose logs -f frontend
+```
+
+**VPS:**
+```bash
+ssh $VPS_USER@$VPS_HOST 'cd /app/task-manager && docker compose logs -f'
+```
+
+**Vercel/Railway/Render:**
+Используйте встроенные дашборды для просмотра логов и метрик.
 
 ## 📚 API интеграция
 
